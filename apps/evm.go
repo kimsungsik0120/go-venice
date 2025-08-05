@@ -64,6 +64,16 @@ func NewEvmRpc(url string, chainId chianId) EvmRpc {
 	return EvmRpc{url, w, big.NewInt(int64(chainId))}
 }
 
+func (evm *EvmRpc) GetTransaction(hash string) (*eTypes.Transaction, error) {
+	tx, err := evm.web3.Eth.GetTransactionByHash(common.HexToHash(hash))
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(hash, " -> Transaction: ", tx)
+
+	return tx, nil
+}
+
 func (evm *EvmRpc) GetBlockNumber() (uint64, error) {
 	blockNumber, err := evm.web3.Eth.GetBlockNumber()
 	if err != nil {
