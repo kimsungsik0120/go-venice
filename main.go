@@ -2,14 +2,17 @@ package main
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	"go-venice/apps"
 	"go-venice/configs"
+	"sync"
+	"time"
 )
 
 func main() {
 
 	config := configs.NewEnvConfig()
-	baseRpc := apps.NewEvmRpc(config.RpcUrl, apps.BASE_MAINNET)
+	baseRpc := apps.NewEvmRpc(config.RpcUrl, apps.BASE_SEPOLIA)
 
 	blockNumber, err := baseRpc.GetBlockNumber()
 	if err != nil {
@@ -23,37 +26,49 @@ func main() {
 	}
 	fmt.Println("GetBalance: ", res)
 
-	if err != nil {
-		fmt.Println("Error converting hex to int:", err)
-		return
-	}
-
-	delegated, err := baseRpc.GetDelegated(config.Address)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(delegated)
-
-	reward, err := baseRpc.GetReward(config.Address)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(reward)
-
-	unsigned, err := baseRpc.CreateClaimTransaction(config.Address)
-	fmt.Println(unsigned)
+	unsigned, err := baseRpc.CreateRawTransaction(config.Address, config.Address, "0.00001", nil)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(unsigned)
 
 	signed, err := baseRpc.SingRawTransaction(unsigned, config.PrivateKey)
-	fmt.Println(signed)
 	if err != nil {
 		panic(err)
 	}
-	/*
-		tx, err := baseRpc.Broadcast(signed)
-		fmt.Println(err)
-		fmt.Println(tx)
-	*/
+	fmt.Println(signed)
+
+	txHash, err := baseRpc.Broadcast(signed)
+
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(txHash)
+
+	wg := sync.WaitGroup{}
+	txChan := make(chan *types.Transaction)
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+
+		for range 10 {
+			tx, err := baseRpc.GetTransaction(txHash)
+			if tx != nil && err == nil {
+				txChan <- tx
+				break
+			}
+			time.Sleep(time.Second)
+		}
+
+		close(txChan)
+	}()
+	go func() {
+		defer wg.Done()
+		tx := <-txChan
+		fmt.Println("txChan consume :", tx)
+	}()
+
+	wg.Wait()
+
 }
