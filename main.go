@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"go-venice/apps"
 	"go-venice/configs"
+	"go-venice/utils"
 	"sync"
 	"time"
 )
@@ -67,6 +68,7 @@ func main() {
 		defer wg.Done()
 		tx := <-txChan
 		fmt.Println("txChan consume :", tx)
+		utils.BeautifierPrint(tx)
 	}()
 
 	wg.Wait()
