@@ -2,75 +2,33 @@ package main
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/types"
-	"go-venice/apps"
-	"go-venice/configs"
-	"go-venice/utils"
-	"sync"
+	"github.com/gin-gonic/gin"
 	"time"
 )
 
 func main() {
-
-	config := configs.NewEnvConfig()
-	baseRpc := apps.NewEvmRpc(config.RpcUrl, apps.BASE_SEPOLIA)
-
-	blockNumber, err := baseRpc.GetBlockNumber()
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(blockNumber)
-
-	res, err := baseRpc.GetBalance(config.Address)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("GetBalance: ", res)
-
-	unsigned, err := baseRpc.CreateRawTransaction(config.Address, config.Address, "0.00001", nil)
-	if err != nil {
+	router := gin.New()
+	// LoggerWithFormatter 미들웨어는 gin.DefaultWriter에 로그를 작성합니다.
+	// 기본값 gin.DefaultWriter = os.Stdout
+	router.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		// 사용자 정의 형식
+		return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
+			param.ClientIP,
+			param.TimeStamp.Format(time.RFC1123),
+			param.Method,
+			param.Path,
+			param.Request.Proto,
+			param.StatusCode,
+			param.Latency,
+			param.Request.UserAgent(),
+			param.ErrorMessage,
+		)
+	}))
+	router.Use(gin.Recovery())
+	router.GET("/ping", func(c *gin.Context) {
+		c.String(200, "pong")
+	})
+	if err := router.Run("0.0.0.0:8081"); err != nil {
 		panic(err)
 	}
-	fmt.Println(unsigned)
-
-	signed, err := baseRpc.SingRawTransaction(unsigned, config.PrivateKey)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(signed)
-
-	txHash, err := baseRpc.Broadcast(signed)
-
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(txHash)
-
-	wg := sync.WaitGroup{}
-	txChan := make(chan *types.Transaction)
-
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-
-		for range 10 {
-			tx, err := baseRpc.GetTransaction(txHash)
-			if tx != nil && err == nil {
-				txChan <- tx
-				break
-			}
-			time.Sleep(time.Second)
-		}
-
-		close(txChan)
-	}()
-	go func() {
-		defer wg.Done()
-		tx := <-txChan
-		fmt.Println("txChan consume :", tx)
-		utils.BeautifierPrint(tx)
-	}()
-
-	wg.Wait()
-
 }
