@@ -98,39 +98,12 @@ func (evm *EvmRpc) GetBalance(address string) (*big.Int, error) {
 	return balanceWei, nil
 }
 
-func (evm *EvmRpc) GetDelegated(address string) (*big.Int, error) {
-	abiString := `[
-	{
-	  "inputs": [
-		{
-		  "internalType": "address",
-		  "name": "account",
-		  "type": "address"
-		}
-	  ],
-	  "name": "balanceOf",
-	  "outputs": [
-		{
-		  "internalType": "uint256",
-		  "name": "",
-		  "type": "uint256"
-		}
-	  ],
-	  "stateMutability": "view",
-	  "type": "function"
-	}
-]`
-	contract, err := evm.web3.Eth.NewContract(abiString, string(StakingAddress))
-	if err != nil {
-		return nil, errors.Wrap(err, "")
-	}
+func (evm *EvmRpc) GetBalanceToken(address string) (*big.Int, error) {
+	return evm.balanceOf(TonkenAddress, address)
+}
 
-	call, err := contract.Call(string(BalanceOf), common.HexToAddress(address))
-	if err != nil {
-		return nil, errors.Wrap(err, "")
-	}
-	fmt.Println(call)
-	return call.(*big.Int), nil
+func (evm *EvmRpc) GetDelegated(address string) (*big.Int, error) {
+	return evm.balanceOf(StakingAddress, address)
 }
 
 func (evm *EvmRpc) GetReward(address string) (*big.Int, error) {
@@ -423,6 +396,41 @@ func (evm *EvmRpc) GetFeeHistory() (*types.FeeHistory, error) {
 	fmt.Println("feeHistory: ", feeHistory)
 
 	return feeHistory, nil
+}
+
+func (evm *EvmRpc) balanceOf(contractAddress ContractAddress, address string) (*big.Int, error) {
+	abiString := `[
+	{
+	  "inputs": [
+		{
+		  "internalType": "address",
+		  "name": "account",
+		  "type": "address"
+		}
+	  ],
+	  "name": "balanceOf",
+	  "outputs": [
+		{
+		  "internalType": "uint256",
+		  "name": "",
+		  "type": "uint256"
+		}
+	  ],
+	  "stateMutability": "view",
+	  "type": "function"
+	}
+]`
+	contract, err := evm.web3.Eth.NewContract(abiString, string(contractAddress))
+	if err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+
+	call, err := contract.Call(string(BalanceOf), common.HexToAddress(address))
+	if err != nil {
+		return nil, errors.Wrap(err, "")
+	}
+	fmt.Println(call)
+	return call.(*big.Int), nil
 }
 
 func createPayload(method EvmRPCMethod, params []string) (io.Reader, error) {
