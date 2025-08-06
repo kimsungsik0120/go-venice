@@ -1,4 +1,4 @@
-package apps
+package nodes
 
 import (
 	"bytes"
@@ -22,13 +22,6 @@ import (
 	"strings"
 )
 
-type chianId int64
-
-const (
-	BASE_SEPOLIA chianId = 84532
-	BASE_MAINNET chianId = 8453
-)
-
 type EvmRPCMethod string
 type EvmContractMethod string
 type ContractAddress string
@@ -49,22 +42,22 @@ const (
 	StakingAddress ContractAddress = "0x321b7ff75154472B18EDb199033fF4D116F340Ff"
 )
 
-type EvmRpc struct {
+type Evm struct {
 	url     string
 	web3    *web3.Web3
 	chainId *big.Int
 }
 
-func NewEvmRpc(url string, chainId chianId) EvmRpc {
+func NewEvm(url string, chainId int64) *Evm {
 	w, err := web3.NewWeb3(url)
 	if err != nil {
 		panic(err)
 	}
-	w.Eth.SetChainId(int64(chainId))
-	return EvmRpc{url, w, big.NewInt(int64(chainId))}
+	w.Eth.SetChainId(chainId)
+	return &Evm{url, w, big.NewInt(chainId)}
 }
 
-func (evm *EvmRpc) GetTransaction(hash string) (*eTypes.Transaction, error) {
+func (evm *Evm) GetTransaction(hash string) (*eTypes.Transaction, error) {
 	tx, err := evm.web3.Eth.GetTransactionByHash(common.HexToHash(hash))
 	if err != nil {
 		return nil, err
@@ -74,7 +67,7 @@ func (evm *EvmRpc) GetTransaction(hash string) (*eTypes.Transaction, error) {
 	return tx, nil
 }
 
-func (evm *EvmRpc) GetBlockNumber() (uint64, error) {
+func (evm *Evm) GetBlockNumber() (uint64, error) {
 	blockNumber, err := evm.web3.Eth.GetBlockNumber()
 	if err != nil {
 		return 0, err
@@ -83,7 +76,7 @@ func (evm *EvmRpc) GetBlockNumber() (uint64, error) {
 
 	return blockNumber, nil
 }
-func (evm *EvmRpc) GetBalance(address string) (*big.Int, error) {
+func (evm *Evm) GetBalance(address string) (*big.Int, error) {
 
 	res, err := evm.call(MethodEthGetBalance, []string{address, "latest"})
 	if err != nil {
@@ -98,15 +91,15 @@ func (evm *EvmRpc) GetBalance(address string) (*big.Int, error) {
 	return balanceWei, nil
 }
 
-func (evm *EvmRpc) GetBalanceToken(address string) (*big.Int, error) {
+func (evm *Evm) GetBalanceToken(address string) (*big.Int, error) {
 	return evm.balanceOf(TonkenAddress, address)
 }
 
-func (evm *EvmRpc) GetDelegated(address string) (*big.Int, error) {
+func (evm *Evm) GetDelegated(address string) (*big.Int, error) {
 	return evm.balanceOf(StakingAddress, address)
 }
 
-func (evm *EvmRpc) GetReward(address string) (*big.Int, error) {
+func (evm *Evm) GetReward(address string) (*big.Int, error) {
 	abiString := `[
 	{
 	  "inputs": [
@@ -141,7 +134,7 @@ func (evm *EvmRpc) GetReward(address string) (*big.Int, error) {
 	return call.(*big.Int), nil
 }
 
-func (evm *EvmRpc) CreateClaimTransaction(fromAddress string) (string, error) {
+func (evm *Evm) CreateClaimTransaction(fromAddress string) (string, error) {
 	abiString := `[
 	{
 	  "inputs": [],
@@ -170,7 +163,7 @@ func (evm *EvmRpc) CreateClaimTransaction(fromAddress string) (string, error) {
 	return transaction, nil
 }
 
-func (evm *EvmRpc) CreateApproveTransaction(fromAddress string, ethAmount string) (string, error) {
+func (evm *Evm) CreateApproveTransaction(fromAddress string, ethAmount string) (string, error) {
 	abiString := `[
 	{
 	  "inputs": [
@@ -216,7 +209,7 @@ func (evm *EvmRpc) CreateApproveTransaction(fromAddress string, ethAmount string
 	return transaction, nil
 }
 
-func (evm *EvmRpc) CreateStakeTransaction(fromAddress string, ethAmount string) (string, error) {
+func (evm *Evm) CreateStakeTransaction(fromAddress string, ethAmount string) (string, error) {
 	abiString := `[
 	{
 	  "inputs": [
@@ -256,7 +249,7 @@ func (evm *EvmRpc) CreateStakeTransaction(fromAddress string, ethAmount string) 
 	return transaction, nil
 }
 
-func (evm *EvmRpc) CreateRawTransaction(fromAddress, toAddress, ethAmount string, input []byte) (string, error) {
+func (evm *Evm) CreateRawTransaction(fromAddress, toAddress, ethAmount string, input []byte) (string, error) {
 	nonce, err := evm.getNonce(fromAddress)
 	if err != nil {
 		return "", err
@@ -292,7 +285,7 @@ func (evm *EvmRpc) CreateRawTransaction(fromAddress, toAddress, ethAmount string
 	return hexTx, nil
 }
 
-func (evm *EvmRpc) SingRawTransaction(unsigned string, privateKeyHex string) (string, error) {
+func (evm *Evm) SingRawTransaction(unsigned string, privateKeyHex string) (string, error) {
 	raw, err := hex.DecodeString(strings.TrimPrefix(unsigned, "0x")) // "0x" 제거
 	if err != nil {
 		return "", errors.Wrap(err, "hex decode 실패")
@@ -318,7 +311,7 @@ func (evm *EvmRpc) SingRawTransaction(unsigned string, privateKeyHex string) (st
 	return hexutil.Encode(txData), nil
 }
 
-func (evm *EvmRpc) Broadcast(signedTx string) (string, error) {
+func (evm *Evm) Broadcast(signedTx string) (string, error) {
 
 	resp, err := evm.call(MethodEthSendRawTransaction, []string{signedTx})
 	if err != nil {
@@ -328,7 +321,7 @@ func (evm *EvmRpc) Broadcast(signedTx string) (string, error) {
 	return resp.Result, nil
 }
 
-func (evm *EvmRpc) getNonce(address string) (uint64, error) {
+func (evm *Evm) getNonce(address string) (uint64, error) {
 	nonce, err := evm.web3.Eth.GetNonce(common.HexToAddress(address), nil)
 	if err != nil {
 		return 0, err
@@ -338,7 +331,7 @@ func (evm *EvmRpc) getNonce(address string) (uint64, error) {
 	return nonce, nil
 }
 
-func (evm *EvmRpc) GetGasPrice() (uint64, error) {
+func (evm *Evm) GetGasPrice() (uint64, error) {
 	gasPrice, err := evm.web3.Eth.GasPrice()
 	if err != nil {
 		return 0, err
@@ -348,7 +341,7 @@ func (evm *EvmRpc) GetGasPrice() (uint64, error) {
 	return gasPrice, nil
 }
 
-func (evm *EvmRpc) GetEstimateFee() (*eth.EstimateFee, error) {
+func (evm *Evm) GetEstimateFee() (*eth.EstimateFee, error) {
 	fee, err := evm.web3.Eth.EstimateFee()
 	if err != nil {
 		return nil, errors.Wrap(err, "")
@@ -358,7 +351,7 @@ func (evm *EvmRpc) GetEstimateFee() (*eth.EstimateFee, error) {
 	return fee, nil
 }
 
-func (evm *EvmRpc) GetEstimateGas(from, to string, data types.CallMsgData) (uint64, error) {
+func (evm *Evm) GetEstimateGas(from, to string, data types.CallMsgData) (uint64, error) {
 	fee, err := evm.web3.Eth.EstimateGas(&types.CallMsg{
 		From: common.HexToAddress(from), To: common.HexToAddress(to), Data: data, Gas: nil, GasPrice: nil, Value: nil,
 	})
@@ -370,7 +363,7 @@ func (evm *EvmRpc) GetEstimateGas(from, to string, data types.CallMsgData) (uint
 	return fee, nil
 }
 
-func (evm *EvmRpc) GetEstimatePriorityFee() (*big.Int, error) {
+func (evm *Evm) GetEstimatePriorityFee() (*big.Int, error) {
 	blockNumber, err := evm.GetBlockNumber()
 	if err != nil {
 		return nil, errors.Wrap(err, "")
@@ -384,7 +377,7 @@ func (evm *EvmRpc) GetEstimatePriorityFee() (*big.Int, error) {
 	return gasPrice, nil
 }
 
-func (evm *EvmRpc) GetFeeHistory() (*types.FeeHistory, error) {
+func (evm *Evm) GetFeeHistory() (*types.FeeHistory, error) {
 	blockNumber, err := evm.GetBlockNumber()
 	if err != nil {
 		return nil, errors.Wrap(err, "")
@@ -398,7 +391,7 @@ func (evm *EvmRpc) GetFeeHistory() (*types.FeeHistory, error) {
 	return feeHistory, nil
 }
 
-func (evm *EvmRpc) balanceOf(contractAddress ContractAddress, address string) (*big.Int, error) {
+func (evm *Evm) balanceOf(contractAddress ContractAddress, address string) (*big.Int, error) {
 	abiString := `[
 	{
 	  "inputs": [
@@ -449,7 +442,7 @@ func createPayload(method EvmRPCMethod, params []string) (io.Reader, error) {
 	return bytes.NewReader(bytesRequest), nil
 }
 
-func (evm *EvmRpc) call(method EvmRPCMethod, params []string) (*dtos.EvmRPCResponse, error) {
+func (evm *Evm) call(method EvmRPCMethod, params []string) (*dtos.EvmRPCResponse, error) {
 	payload, err := createPayload(method, params)
 	if err != nil {
 		fmt.Println(err)

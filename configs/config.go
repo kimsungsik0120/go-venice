@@ -6,6 +6,7 @@ import (
 )
 
 type EnvConfig struct {
+	ChainId    int64  `env:"CHAIN_ID,required"`
 	Address    string `env:"ADDRESS,required"`
 	PrivateKey string `env:"PRIVATE_KEY,required"`
 	RpcUrl     string `env:"RPC_URL,required"`
