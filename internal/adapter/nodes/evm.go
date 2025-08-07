@@ -14,8 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/pkg/errors"
-	"go-venice/dtos"
-	"go-venice/utils"
+	"go-venice/pkg/utils"
 	"io"
 	"math/big"
 	"net/http"
@@ -427,7 +426,7 @@ func (evm *Evm) balanceOf(contractAddress ContractAddress, address string) (*big
 }
 
 func createPayload(method EvmRPCMethod, params []string) (io.Reader, error) {
-	req := dtos.EvmRPCRequest{
+	req := EvmRPCRequest{
 		JsonRpc: "2.0",
 		Method:  string(method),
 		Id:      1,
@@ -442,7 +441,7 @@ func createPayload(method EvmRPCMethod, params []string) (io.Reader, error) {
 	return bytes.NewReader(bytesRequest), nil
 }
 
-func (evm *Evm) call(method EvmRPCMethod, params []string) (*dtos.EvmRPCResponse, error) {
+func (evm *Evm) call(method EvmRPCMethod, params []string) (*EvmRPCResponse, error) {
 	payload, err := createPayload(method, params)
 	if err != nil {
 		fmt.Println(err)
@@ -464,7 +463,7 @@ func (evm *Evm) call(method EvmRPCMethod, params []string) (*dtos.EvmRPCResponse
 	fmt.Println(res.Body)
 	byteBody, err := io.ReadAll(res.Body)
 
-	resDto := dtos.EvmRPCResponse{}
+	resDto := EvmRPCResponse{}
 	if err := json.Unmarshal(byteBody, &resDto); err != nil {
 		return nil, errors.Wrap(err, "")
 	}

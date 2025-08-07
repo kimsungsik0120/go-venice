@@ -1,4 +1,4 @@
-package dtos
+package nodes
 
 type EVMError struct {
 	Code    int    `json:"code"`
