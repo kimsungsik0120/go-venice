@@ -6,13 +6,14 @@ import (
 )
 
 type EnvConfig struct {
+	Port       string `env:"PORT,required"`
 	ChainId    int64  `env:"CHAIN_ID,required"`
 	Address    string `env:"ADDRESS,required"`
 	PrivateKey string `env:"PRIVATE_KEY,required"`
 	RpcUrl     string `env:"RPC_URL,required"`
 }
 
-func NewEnvConfig() *EnvConfig {
+func Load() *EnvConfig {
 	err := godotenv.Load()
 
 	if err != nil {

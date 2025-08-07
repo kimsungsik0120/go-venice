@@ -14,7 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/pkg/errors"
-	"go-venice/pkg/utils"
+	"go-venice/configs"
+	"go-venice/shared/utils"
 	"io"
 	"math/big"
 	"net/http"
@@ -47,13 +48,13 @@ type Evm struct {
 	chainId *big.Int
 }
 
-func NewEvm(url string, chainId int64) *Evm {
-	w, err := web3.NewWeb3(url)
+func NewEvm(cfg *configs.EnvConfig) *Evm {
+	w, err := web3.NewWeb3(cfg.RpcUrl)
 	if err != nil {
 		panic(err)
 	}
-	w.Eth.SetChainId(chainId)
-	return &Evm{url, w, big.NewInt(chainId)}
+	w.Eth.SetChainId(cfg.ChainId)
+	return &Evm{cfg.RpcUrl, w, big.NewInt(cfg.ChainId)}
 }
 
 func (evm *Evm) GetTransaction(hash string) (*eTypes.Transaction, error) {

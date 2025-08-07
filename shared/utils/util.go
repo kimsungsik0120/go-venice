@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -15,12 +14,4 @@ func HexToBigInt(hexStr string) (*big.Int, error) {
 		return nil, fmt.Errorf("invalid hex string: %s", hexStr)
 	}
 	return n, nil
-}
-
-func BeautifierPrint(v any) {
-	jsonBytes, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(string(jsonBytes))
 }

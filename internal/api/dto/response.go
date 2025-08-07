@@ -1,6 +1,6 @@
 package dto
 
-type BalanceRequest struct {
+type BalanceResponse struct {
 	Amount string `json:"amount"`
 	Symbol string `json:"symbol"`
 }
