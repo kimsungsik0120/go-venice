@@ -6,6 +6,8 @@ import (
 	"go-venice/configs"
 	"go-venice/internal/adapter/nodes"
 	"go-venice/internal/api/dto"
+	"go-venice/pkg/utils"
+	"math/big"
 )
 
 type NodeService interface {
@@ -27,7 +29,7 @@ func (s *nodeService) GetBalance(ctx context.Context, address string) (*dto.Bala
 		return nil, err
 	}
 
-	return &dto.BalanceResponse{Amount: balance.String(), Symbol: "BASE"}, nil
+	return &dto.BalanceResponse{Amount: utils.DivideBy(balance, big.NewInt(1e18)), Symbol: "BASE"}, nil
 }
 
 func (s *nodeService) CreateTransaction(ctx context.Context, fromAddress string, toAddress string, amount string) (*dto.TransactionResponse, error) {

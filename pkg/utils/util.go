@@ -15,3 +15,9 @@ func HexToBigInt(hexStr string) (*big.Int, error) {
 	}
 	return n, nil
 }
+
+func DivideBy(a *big.Int, b *big.Int) string {
+	bf := new(big.Float).SetInt(a) // balance → big.Float
+	denom := new(big.Float).SetInt(b)
+	return new(big.Float).Quo(bf, denom).String()
+}
