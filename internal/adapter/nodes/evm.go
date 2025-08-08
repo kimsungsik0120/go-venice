@@ -2,6 +2,7 @@ package nodes
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/pkg/errors"
 	"go-venice/configs"
-	"go-venice/shared/utils"
+	"go-venice/pkg/utils"
 	"io"
 	"math/big"
 	"net/http"
@@ -76,9 +77,9 @@ func (evm *Evm) GetBlockNumber() (uint64, error) {
 
 	return blockNumber, nil
 }
-func (evm *Evm) GetBalance(address string) (*big.Int, error) {
+func (evm *Evm) GetBalance(ctx context.Context, address string) (*big.Int, error) {
 
-	res, err := evm.call(MethodEthGetBalance, []string{address, "latest"})
+	res, err := evm.call(ctx, MethodEthGetBalance, []string{address, "latest"})
 	if err != nil {
 		return nil, errors.Wrap(err, "GetBalance call fail")
 	}
@@ -134,6 +135,10 @@ func (evm *Evm) GetReward(address string) (*big.Int, error) {
 	return call.(*big.Int), nil
 }
 
+func (evm *Evm) CreateTransferTransaction(fromAddress, toAddress, ethAmount string) (string, error) {
+	return evm.createRawTransaction(fromAddress, toAddress, ethAmount, nil)
+
+}
 func (evm *Evm) CreateClaimTransaction(fromAddress string) (string, error) {
 	abiString := `[
 	{
@@ -155,7 +160,7 @@ func (evm *Evm) CreateClaimTransaction(fromAddress string) (string, error) {
 
 	fmt.Println("abi: ", hexutil.Encode(abi))
 
-	transaction, err := evm.CreateRawTransaction(fromAddress, string(StakingAddress), "0", abi)
+	transaction, err := evm.createRawTransaction(fromAddress, string(StakingAddress), "0", abi)
 	if err != nil {
 		return "", errors.Wrap(err, "CreateRawTransaction error")
 	}
@@ -201,7 +206,7 @@ func (evm *Evm) CreateApproveTransaction(fromAddress string, ethAmount string) (
 
 	fmt.Println("abi: ", hexutil.Encode(abi))
 
-	transaction, err := evm.CreateRawTransaction(fromAddress, string(TonkenAddress), "0", abi)
+	transaction, err := evm.createRawTransaction(fromAddress, string(TonkenAddress), "0", abi)
 	if err != nil {
 		return "", errors.Wrap(err, "CreateRawTransaction error")
 	}
@@ -241,7 +246,7 @@ func (evm *Evm) CreateStakeTransaction(fromAddress string, ethAmount string) (st
 
 	fmt.Println("abi: ", hexutil.Encode(abi))
 
-	transaction, err := evm.CreateRawTransaction(fromAddress, string(StakingAddress), "0", abi)
+	transaction, err := evm.createRawTransaction(fromAddress, string(StakingAddress), "0", abi)
 	if err != nil {
 		return "", errors.Wrap(err, "CreateRawTransaction error")
 	}
@@ -249,7 +254,7 @@ func (evm *Evm) CreateStakeTransaction(fromAddress string, ethAmount string) (st
 	return transaction, nil
 }
 
-func (evm *Evm) CreateRawTransaction(fromAddress, toAddress, ethAmount string, input []byte) (string, error) {
+func (evm *Evm) createRawTransaction(fromAddress, toAddress, ethAmount string, input []byte) (string, error) {
 	nonce, err := evm.getNonce(fromAddress)
 	if err != nil {
 		return "", err
@@ -311,9 +316,9 @@ func (evm *Evm) SingRawTransaction(unsigned string, privateKeyHex string) (strin
 	return hexutil.Encode(txData), nil
 }
 
-func (evm *Evm) Broadcast(signedTx string) (string, error) {
+func (evm *Evm) Broadcast(ctx context.Context, signedTx string) (string, error) {
 
-	resp, err := evm.call(MethodEthSendRawTransaction, []string{signedTx})
+	resp, err := evm.call(ctx, MethodEthSendRawTransaction, []string{signedTx})
 	if err != nil {
 		return "", errors.Wrap(err, "MethodEthSendRawTransaction 실패")
 	}
@@ -442,13 +447,13 @@ func createPayload(method EvmRPCMethod, params []string) (io.Reader, error) {
 	return bytes.NewReader(bytesRequest), nil
 }
 
-func (evm *Evm) call(method EvmRPCMethod, params []string) (*EvmRPCResponse, error) {
+func (evm *Evm) call(ctx context.Context, method EvmRPCMethod, params []string) (*EvmRPCResponse, error) {
 	payload, err := createPayload(method, params)
 	if err != nil {
 		fmt.Println(err)
 		return nil, errors.Wrap(err, "")
 	}
-	req, err := http.NewRequest("POST", evm.url, payload)
+	req, err := http.NewRequestWithContext(ctx, "POST", evm.url, payload)
 	if err != nil {
 		fmt.Println(err)
 		return nil, errors.Wrap(err, "")

@@ -8,8 +8,9 @@ import (
 func nodeRouter(router *gin.Engine, cfg RouterConfig) {
 	nodeHandler := handler.NewNodeHandler(cfg.NodeService)
 
-	v1 := router.Group("/v1/node")
+	v1 := router.Group("/v1")
+	node := v1.Group("/node")
 	{
-		v1.GET("/balance", nodeHandler.GetBalance)
+		node.GET("/balance", nodeHandler.GetBalance)
 	}
 }

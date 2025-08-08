@@ -15,6 +15,7 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 	engine := gin.New()
 
 	// 미들웨어 등록
+	engine.Use(middleware.RequestID())
 	engine.Use(middleware.Logging())
 	engine.Use(gin.Recovery())
 

@@ -20,7 +20,7 @@ func NewNodeHandler(svc service.NodeService) NodeHandler {
 func (nh *nodeHandler) GetBalance(ctx *gin.Context) {
 	// 예시: 쿼리 파라미터 받아서 서비스 호출
 	address := ctx.Query("address")
-	balance, err := nh.svc.GetBalance(address)
+	balance, err := nh.svc.GetBalance(ctx, address)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
