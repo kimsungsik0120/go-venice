@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go-venice/configs"
 	"go-venice/internal/adapter/nodes"
+	"go-venice/internal/api/handler"
 	"go-venice/internal/api/router"
 	"go-venice/internal/api/service"
 )
@@ -20,8 +21,9 @@ func InitializeRouter() *gin.Engine {
 	envConfig := configs.Load()
 	evm := nodes.NewEvm(envConfig)
 	nodeService := service.NewNodeService(envConfig, evm)
+	nodeHandler := handler.NewNodeHandler(nodeService)
 	routerConfig := router.RouterConfig{
-		NodeService: nodeService,
+		NodeHandler: nodeHandler,
 	}
 	engine := router.NewRouter(routerConfig)
 	return engine
