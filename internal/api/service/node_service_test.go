@@ -16,9 +16,33 @@ import (
 	"testing"
 )
 
+type testEnv struct {
+	svc      service.NodeService
+	mockNode *mocks.MockNode
+}
+
+func setupTestEnv() *testEnv {
+	mockNode := new(mocks.MockNode)
+	cfg := fakeConfig() // 테스트용 config 생성
+
+	svc := service.NewNodeService(cfg, mockNode)
+
+	return &testEnv{
+		svc:      svc,
+		mockNode: mockNode,
+	}
+}
+
+func fakeConfig() *configs.EnvConfig {
+	return &configs.EnvConfig{
+		RpcUrl:  "http://fake-rpc",
+		ChainId: 1,
+	}
+}
+
 func TestGetBalance(t *testing.T) {
 	// given: mock Noder
-	mockNode := new(mocks.MockNode)
+	env := setupTestEnv()
 
 	//given
 	var fakerInt int
@@ -28,13 +52,13 @@ func TestGetBalance(t *testing.T) {
 	}
 	testBalance := new(big.Int).Mul(big.NewInt(int64(fakerInt)), big.NewInt(1e18))
 
-	mockNode.
+	env.mockNode.
 		On("GetBalance", mock.Anything, "0x123").
 		Return(testBalance, nil)
 
 	// and: service
 	cfg := configs.EnvConfig{ /* 필요한 필드 채우기 */ }
-	svc := service.NewNodeService(&cfg, mockNode)
+	svc := service.NewNodeService(&cfg, env.mockNode)
 
 	// when
 	resp, err := svc.GetBalance(context.Background(), "0x123")
@@ -48,5 +72,5 @@ func TestGetBalance(t *testing.T) {
 		Symbol: "BASE",
 	}, resp)
 
-	mockNode.AssertExpectations(t)
+	env.mockNode.AssertExpectations(t)
 }
